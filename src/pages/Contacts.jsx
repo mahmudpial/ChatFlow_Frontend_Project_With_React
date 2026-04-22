@@ -23,7 +23,6 @@ export default function Contacts() {
             reminders: [],
         };
 
-        // safer state update (avoids race conditions)
         setContacts((prev) => [...prev, newContact]);
 
         setName("");
@@ -32,9 +31,33 @@ export default function Contacts() {
 
     return (
         <div className="p-4 max-w-xl mx-auto">
-            <h1 className="text-2xl font-bold mb-4">
-                Contacts
-            </h1>
+
+            {/* HEADER */}
+            <div className="flex justify-between items-center mb-4">
+                <h1 className="text-2xl font-bold">
+                    Contacts
+                </h1>
+
+                <div className="flex gap-2">
+                    <button
+                        onClick={() =>
+                            navigate("/dashboard")
+                        }
+                        className="text-sm text-blue-500"
+                    >
+                        Dashboard
+                    </button>
+
+                    <button
+                        onClick={() =>
+                            navigate("/reminders")
+                        }
+                        className="text-sm text-yellow-600"
+                    >
+                        Reminders
+                    </button>
+                </div>
+            </div>
 
             {/* FORM */}
             <div className="flex gap-2 mb-4">
@@ -61,9 +84,14 @@ export default function Contacts() {
             {/* LIST */}
             <div className="bg-white shadow rounded">
                 {contacts.length === 0 ? (
-                    <p className="p-4 text-gray-500">
-                        No contacts yet
-                    </p>
+                    <div className="p-6 text-center">
+                        <p className="text-gray-500 mb-2">
+                            No contacts yet
+                        </p>
+                        <p className="text-sm text-gray-400">
+                            Add your first customer to start CRM tracking
+                        </p>
+                    </div>
                 ) : (
                     contacts.map((c) => (
                         <div

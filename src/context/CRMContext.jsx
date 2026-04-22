@@ -4,20 +4,43 @@ const CRMContext = createContext();
 
 export function CRMProvider({ children }) {
     const [contacts, setContacts] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    // Load once
+    // Load once (safe version)
     useEffect(() => {
-        const data = JSON.parse(localStorage.getItem("contacts")) || [];
-        setContacts(data);
+        try {
+            const data = localStorage.getItem("contacts");
+
+            if (data) {
+                const parsed = JSON.parse(data);
+                setContacts(Array.isArray(parsed) ? parsed : []);
+            }
+        } catch (error) {
+            console.error("Failed to load contacts:", error);
+            setContacts([]);
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
     // Save whenever contacts change
     useEffect(() => {
-        localStorage.setItem("contacts", JSON.stringify(contacts));
-    }, [contacts]);
+        if (!loading) {
+            localStorage.setItem(
+                "contacts",
+                JSON.stringify(contacts)
+            );
+        }
+    }, [contacts, loading]);
 
     return (
-        <CRMContext.Provider value={{ contacts, setContacts }}>
+        <CRMContext.Provider
+            value={{
+                contacts,
+                setContacts,
+                loading,
+            }}
+        >
             {children}
         </CRMContext.Provider>
     );

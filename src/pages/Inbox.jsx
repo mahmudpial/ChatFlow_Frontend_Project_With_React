@@ -4,7 +4,7 @@ import { useCRM } from "../context/CRMContext";
 
 export default function Inbox() {
     const { id } = useParams();
-    const { contacts, setContacts } = useCRM();
+    const { contacts, setContacts, loading } = useCRM();
 
     const [input, setInput] = useState("");
     const [messages, setMessages] = useState([]);
@@ -12,23 +12,41 @@ export default function Inbox() {
     const [reminderText, setReminderText] = useState("");
     const [reminderDate, setReminderDate] = useState("");
 
-    // Find current contact
-    const contact = contacts.find(
+    // Safe contact lookup
+    const contact = contacts?.find(
         (c) => c.id === Number(id)
     );
 
-    // Sync messages when contact changes
+    // Sync messages safely
     useEffect(() => {
-        if (contact?.messages) {
+        if (contact && Array.isArray(contact.messages)) {
             setMessages(contact.messages);
         } else {
             setMessages([]);
         }
     }, [contact]);
 
+    // Loading state (important for SaaS UX)
+    if (loading) {
+        return (
+            <div className="p-4 text-gray-500">
+                Loading inbox...
+            </div>
+        );
+    }
+
+    // Contact missing state
+    if (!contact) {
+        return (
+            <div className="p-4 text-gray-500">
+                Contact not found
+            </div>
+        );
+    }
+
     // Send message
     const sendMessage = () => {
-        if (!input.trim() || !contact) return;
+        if (!input.trim()) return;
 
         const newMsg = {
             id: Date.now(),
@@ -53,8 +71,7 @@ export default function Inbox() {
 
     // Add reminder
     const addReminder = () => {
-        if (!reminderText.trim() || !reminderDate || !contact)
-            return;
+        if (!reminderText.trim() || !reminderDate) return;
 
         const newReminder = {
             id: Date.now(),
@@ -81,14 +98,6 @@ export default function Inbox() {
         setReminderText("");
         setReminderDate("");
     };
-
-    if (!contact) {
-        return (
-            <div className="p-4 text-gray-500">
-                Contact not found
-            </div>
-        );
-    }
 
     return (
         <div className="max-w-2xl mx-auto p-4 flex flex-col h-screen">
@@ -163,9 +172,7 @@ export default function Inbox() {
                 <input
                     className="border flex-1 p-2 rounded"
                     value={input}
-                    onChange={(e) =>
-                        setInput(e.target.value)
-                    }
+                    onChange={(e) => setInput(e.target.value)}
                     placeholder="Type message..."
                 />
                 <button
