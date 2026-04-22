@@ -9,6 +9,9 @@ export default function Inbox() {
     const [input, setInput] = useState("");
     const [messages, setMessages] = useState([]);
 
+    const [reminderText, setReminderText] = useState("");
+    const [reminderDate, setReminderDate] = useState("");
+
     // Find current contact
     const contact = contacts.find(
         (c) => c.id === Number(id)
@@ -23,6 +26,7 @@ export default function Inbox() {
         }
     }, [contact]);
 
+    // Send message
     const sendMessage = () => {
         if (!input.trim() || !contact) return;
 
@@ -42,13 +46,40 @@ export default function Inbox() {
             return c;
         });
 
-        // update global state
+        setContacts(updatedContacts);
+        setMessages((prev) => [...prev, newMsg]);
+        setInput("");
+    };
+
+    // Add reminder
+    const addReminder = () => {
+        if (!reminderText.trim() || !reminderDate || !contact)
+            return;
+
+        const newReminder = {
+            id: Date.now(),
+            text: reminderText,
+            date: reminderDate,
+            done: false,
+        };
+
+        const updatedContacts = contacts.map((c) => {
+            if (c.id === Number(id)) {
+                return {
+                    ...c,
+                    reminders: [
+                        ...(c.reminders || []),
+                        newReminder,
+                    ],
+                };
+            }
+            return c;
+        });
+
         setContacts(updatedContacts);
 
-        // update UI instantly
-        setMessages((prev) => [...prev, newMsg]);
-
-        setInput("");
+        setReminderText("");
+        setReminderDate("");
     };
 
     if (!contact) {
@@ -61,6 +92,7 @@ export default function Inbox() {
 
     return (
         <div className="max-w-2xl mx-auto p-4 flex flex-col h-screen">
+
             {/* HEADER */}
             <div className="border-b pb-2 mb-2">
                 <h1 className="text-xl font-bold">
@@ -69,6 +101,40 @@ export default function Inbox() {
                 <p className="text-sm text-gray-500">
                     {contact.phone}
                 </p>
+            </div>
+
+            {/* 🔔 REMINDER SECTION */}
+            <div className="border p-3 rounded mb-3 bg-yellow-50">
+                <h2 className="font-semibold mb-2">
+                    Add Reminder
+                </h2>
+
+                <div className="flex gap-2">
+                    <input
+                        className="border p-2 flex-1 rounded"
+                        placeholder="Reminder text"
+                        value={reminderText}
+                        onChange={(e) =>
+                            setReminderText(e.target.value)
+                        }
+                    />
+
+                    <input
+                        type="date"
+                        className="border p-2 rounded"
+                        value={reminderDate}
+                        onChange={(e) =>
+                            setReminderDate(e.target.value)
+                        }
+                    />
+
+                    <button
+                        onClick={addReminder}
+                        className="bg-yellow-500 text-white px-3 rounded"
+                    >
+                        Add
+                    </button>
+                </div>
             </div>
 
             {/* MESSAGES */}
@@ -97,7 +163,9 @@ export default function Inbox() {
                 <input
                     className="border flex-1 p-2 rounded"
                     value={input}
-                    onChange={(e) => setInput(e.target.value)}
+                    onChange={(e) =>
+                        setInput(e.target.value)
+                    }
                     placeholder="Type message..."
                 />
                 <button

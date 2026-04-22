@@ -10,16 +10,21 @@ export default function Contacts() {
     const [phone, setPhone] = useState("");
 
     const addContact = () => {
-        if (!name.trim() || !phone.trim()) return;
+        const cleanName = name.trim();
+        const cleanPhone = phone.trim();
+
+        if (!cleanName || !cleanPhone) return;
 
         const newContact = {
             id: Date.now(),
-            name,
-            phone,
+            name: cleanName,
+            phone: cleanPhone,
             messages: [],
+            reminders: [],
         };
 
-        setContacts([...contacts, newContact]);
+        // safer state update (avoids race conditions)
+        setContacts((prev) => [...prev, newContact]);
 
         setName("");
         setPhone("");
@@ -27,7 +32,9 @@ export default function Contacts() {
 
     return (
         <div className="p-4 max-w-xl mx-auto">
-            <h1 className="text-2xl font-bold mb-4">Contacts</h1>
+            <h1 className="text-2xl font-bold mb-4">
+                Contacts
+            </h1>
 
             {/* FORM */}
             <div className="flex gap-2 mb-4">
@@ -75,7 +82,6 @@ export default function Contacts() {
                                 </div>
                             </div>
 
-                            {/* small UX hint */}
                             <div className="text-xs text-blue-500">
                                 Open →
                             </div>
