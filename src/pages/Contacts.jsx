@@ -1,33 +1,26 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useCRM } from "../context/CRMContext";
 
 export default function Contacts() {
-    const [contacts, setContacts] = useState([]);
-
-    // LOAD from localStorage
-    useEffect(() => {
-        const saved = localStorage.getItem("contacts");
-        if (saved) setContacts(JSON.parse(saved));
-    }, []);
-
-    // SAVE to localStorage
-    useEffect(() => {
-        localStorage.setItem("contacts", JSON.stringify(contacts));
-    }, [contacts]);
-
+    const { contacts, setContacts } = useCRM();
+    const navigate = useNavigate();
 
     const [name, setName] = useState("");
     const [phone, setPhone] = useState("");
 
     const addContact = () => {
-        if (!name || !phone) return;
+        if (!name.trim() || !phone.trim()) return;
 
         const newContact = {
             id: Date.now(),
             name,
             phone,
+            messages: [],
         };
 
         setContacts([...contacts, newContact]);
+
         setName("");
         setPhone("");
     };
@@ -36,7 +29,7 @@ export default function Contacts() {
         <div className="p-4 max-w-xl mx-auto">
             <h1 className="text-2xl font-bold mb-4">Contacts</h1>
 
-            {/* Form */}
+            {/* FORM */}
             <div className="flex gap-2 mb-4">
                 <input
                     className="border p-2 flex-1 rounded"
@@ -58,15 +51,34 @@ export default function Contacts() {
                 </button>
             </div>
 
-            {/* List */}
+            {/* LIST */}
             <div className="bg-white shadow rounded">
                 {contacts.length === 0 ? (
-                    <p className="p-4 text-gray-500">No contacts yet</p>
+                    <p className="p-4 text-gray-500">
+                        No contacts yet
+                    </p>
                 ) : (
                     contacts.map((c) => (
-                        <div key={c.id} className="p-3 border-b">
-                            <div className="font-semibold">{c.name}</div>
-                            <div className="text-sm text-gray-500">{c.phone}</div>
+                        <div
+                            key={c.id}
+                            onClick={() =>
+                                navigate(`/inbox/${c.id}`)
+                            }
+                            className="p-3 border-b hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                        >
+                            <div>
+                                <div className="font-semibold">
+                                    {c.name}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                    {c.phone}
+                                </div>
+                            </div>
+
+                            {/* small UX hint */}
+                            <div className="text-xs text-blue-500">
+                                Open →
+                            </div>
                         </div>
                     ))
                 )}
