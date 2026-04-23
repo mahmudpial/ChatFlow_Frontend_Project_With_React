@@ -2,12 +2,15 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { CRMProvider } from "./context/CRMContext";
+import { AuthProvider } from "./context/AuthContext";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <CRMProvider>
-      <App />
-    </CRMProvider>
+    <AuthProvider>
+      <CRMProvider>
+        <App />
+      </CRMProvider>
+    </AuthProvider>
   </React.StrictMode>
 );

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useCRM } from "../context/CRMContext";
+import { useCRM } from "../context/useCRM";
+import { contactService } from "../services/contactService";
 
 export default function Contacts() {
     const { contacts, setContacts } = useCRM();
@@ -8,25 +9,45 @@ export default function Contacts() {
 
     const [name, setName] = useState("");
     const [phone, setPhone] = useState("");
+    const [loading, setLoading] = useState(true);
 
-    const addContact = () => {
+    // 🔄 LOAD CONTACTS FROM API
+    useEffect(() => {
+        const loadContacts = async () => {
+            try {
+                const data = await contactService.getAll();
+                setContacts(data);
+            } catch (error) {
+                console.error("Failed to load contacts", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadContacts();
+    }, [setContacts]);
+
+    // ➕ ADD CONTACT (API)
+    const addContact = async () => {
         const cleanName = name.trim();
         const cleanPhone = phone.trim();
 
         if (!cleanName || !cleanPhone) return;
 
-        const newContact = {
-            id: Date.now(),
-            name: cleanName,
-            phone: cleanPhone,
-            messages: [],
-            reminders: [],
-        };
+        try {
+            const newContact = await contactService.create({
+                name: cleanName,
+                phone: cleanPhone,
+            });
 
-        setContacts((prev) => [...prev, newContact]);
+            // update UI instantly
+            setContacts((prev) => [...prev, newContact]);
 
-        setName("");
-        setPhone("");
+            setName("");
+            setPhone("");
+        } catch (error) {
+            console.error("Failed to create contact", error);
+        }
     };
 
     return (
@@ -40,18 +61,14 @@ export default function Contacts() {
 
                 <div className="flex gap-2">
                     <button
-                        onClick={() =>
-                            navigate("/dashboard")
-                        }
+                        onClick={() => navigate("/dashboard")}
                         className="text-sm text-blue-500"
                     >
                         Dashboard
                     </button>
 
                     <button
-                        onClick={() =>
-                            navigate("/reminders")
-                        }
+                        onClick={() => navigate("/reminders")}
                         className="text-sm text-yellow-600"
                     >
                         Reminders
@@ -83,7 +100,12 @@ export default function Contacts() {
 
             {/* LIST */}
             <div className="bg-white shadow rounded">
-                {contacts.length === 0 ? (
+
+                {loading ? (
+                    <p className="p-4 text-gray-400">
+                        Loading contacts...
+                    </p>
+                ) : contacts.length === 0 ? (
                     <div className="p-6 text-center">
                         <p className="text-gray-500 mb-2">
                             No contacts yet

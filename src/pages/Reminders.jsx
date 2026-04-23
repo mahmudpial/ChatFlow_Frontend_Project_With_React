@@ -1,4 +1,5 @@
-import { useCRM } from "../context/CRMContext";
+import { useCRM } from "../context/useCRM";
+import { reminderService } from "../services/reminderService";
 
 export default function Reminders() {
     const { contacts, setContacts, loading } = useCRM();
@@ -12,10 +13,9 @@ export default function Reminders() {
     }
 
     const today = new Date().toISOString().split("T")[0];
-
     const safeContacts = contacts || [];
 
-    // Flatten all reminders safely
+    // flatten
     const allReminders = safeContacts.flatMap((c) =>
         (c.reminders || []).map((r) => ({
             ...r,
@@ -24,36 +24,41 @@ export default function Reminders() {
         }))
     );
 
-    const safeReminders = allReminders.filter(Boolean);
-
-    const todayReminders = safeReminders.filter(
+    const todayReminders = allReminders.filter(
         (r) => r.date === today && !r.done
     );
 
-    const upcomingReminders = safeReminders.filter(
+    const upcomingReminders = allReminders.filter(
         (r) => r.date > today && !r.done
     );
 
-    const overdueReminders = safeReminders.filter(
+    const overdueReminders = allReminders.filter(
         (r) => r.date < today && !r.done
     );
 
-    const markDone = (reminderId, contactId) => {
-        const updated = safeContacts.map((c) => {
-            if (c.id === contactId) {
-                return {
-                    ...c,
-                    reminders: (c.reminders || []).map((r) =>
-                        r.id === reminderId
-                            ? { ...r, done: true }
-                            : r
-                    ),
-                };
-            }
-            return c;
-        });
+    // 🚀 FIXED: API + STATE SYNC
+    const markDone = async (reminderId, contactId) => {
+        try {
+            await reminderService.markDone(reminderId);
 
-        setContacts(updated);
+            const updated = safeContacts.map((c) => {
+                if (c.id === contactId) {
+                    return {
+                        ...c,
+                        reminders: (c.reminders || []).map((r) =>
+                            r.id === reminderId
+                                ? { ...r, done: true }
+                                : r
+                        ),
+                    };
+                }
+                return c;
+            });
+
+            setContacts(updated);
+        } catch (err) {
+            console.error("Failed to mark reminder", err);
+        }
     };
 
     const renderList = (title, list, color) => (
@@ -70,9 +75,7 @@ export default function Reminders() {
                 list.map((r) => (
                     <div
                         key={r.id}
-                        className={`p-3 border mb-2 rounded ${r.done
-                            ? "bg-green-100"
-                            : "bg-white"
+                        className={`p-3 border mb-2 rounded ${r.done ? "bg-green-100" : "bg-white"
                             }`}
                     >
                         <div className="font-semibold">
@@ -102,17 +105,14 @@ export default function Reminders() {
     return (
         <div className="p-4 max-w-xl mx-auto">
 
-            {/* HEADER */}
             <h1 className="text-2xl font-bold mb-4">
                 📅 CRM Reminder Dashboard
             </h1>
 
-            {/* SECTIONS */}
             {renderList("🔥 Today", todayReminders, "text-red-500")}
             {renderList("⏭ Upcoming", upcomingReminders, "text-blue-500")}
             {renderList("⚠ Overdue", overdueReminders, "text-orange-500")}
 
-            {/* EMPTY STATE */}
             {safeContacts.length === 0 && (
                 <div className="text-center text-gray-400 mt-10">
                     No data yet — start by adding contacts

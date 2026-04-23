@@ -1,6 +1,8 @@
 import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { useCRM } from "../context/CRMContext";
+import { useCRM } from "../context/useCRM";
+import { messageService } from "../services/messageService";
+import { reminderService } from "../services/reminderService";
 
 export default function Inbox() {
     const { id } = useParams();
@@ -12,91 +14,89 @@ export default function Inbox() {
     const [reminderText, setReminderText] = useState("");
     const [reminderDate, setReminderDate] = useState("");
 
-    // Safe contact lookup
     const contact = contacts?.find(
         (c) => c.id === Number(id)
     );
 
-    // Sync messages safely
     useEffect(() => {
-        if (contact && Array.isArray(contact.messages)) {
-            setMessages(contact.messages);
-        } else {
-            setMessages([]);
-        }
+        const loadMessages = async () => {
+            if (contact?.messages) {
+                setMessages(contact.messages);
+            } else {
+                setMessages([]);
+            }
+        };
+        loadMessages();
     }, [contact]);
 
-    // Loading state (important for SaaS UX)
     if (loading) {
-        return (
-            <div className="p-4 text-gray-500">
-                Loading inbox...
-            </div>
-        );
+        return <div className="p-4 text-gray-500">Loading inbox...</div>;
     }
 
-    // Contact missing state
     if (!contact) {
-        return (
-            <div className="p-4 text-gray-500">
-                Contact not found
-            </div>
-        );
+        return <div className="p-4 text-gray-500">Contact not found</div>;
     }
 
-    // Send message
-    const sendMessage = () => {
+    // 🚀 SEND MESSAGE (API)
+    const sendMessage = async () => {
         if (!input.trim()) return;
 
-        const newMsg = {
-            id: Date.now(),
-            text: input,
-            time: new Date().toLocaleTimeString(),
-        };
+        try {
+            const newMsg = await messageService.send({
+                contact_id: contact.id,
+                text: input,
+            });
 
-        const updatedContacts = contacts.map((c) => {
-            if (c.id === Number(id)) {
-                return {
-                    ...c,
-                    messages: [...(c.messages || []), newMsg],
-                };
-            }
-            return c;
-        });
+            // update global state
+            const updatedContacts = contacts.map((c) => {
+                if (c.id === contact.id) {
+                    return {
+                        ...c,
+                        messages: [...(c.messages || []), newMsg],
+                    };
+                }
+                return c;
+            });
 
-        setContacts(updatedContacts);
-        setMessages((prev) => [...prev, newMsg]);
-        setInput("");
+            setContacts(updatedContacts);
+            setMessages((prev) => [...prev, newMsg]);
+            setInput("");
+        } catch (err) {
+            console.error("Send message failed", err);
+        }
     };
 
-    // Add reminder
-    const addReminder = () => {
+    // 🔔 ADD REMINDER (API)
+    const addReminder = async () => {
         if (!reminderText.trim() || !reminderDate) return;
 
-        const newReminder = {
-            id: Date.now(),
-            text: reminderText,
-            date: reminderDate,
-            done: false,
-        };
+        try {
+            const newReminder = await reminderService.create({
+                contact_id: contact.id,
+                text: reminderText,
+                date: reminderDate,
+            });
 
-        const updatedContacts = contacts.map((c) => {
-            if (c.id === Number(id)) {
-                return {
-                    ...c,
-                    reminders: [
-                        ...(c.reminders || []),
-                        newReminder,
-                    ],
-                };
-            }
-            return c;
-        });
+            const updatedContacts = contacts.map((c) => {
+                if (c.id === contact.id) {
+                    return {
+                        ...c,
+                        reminders: [
+                            ...(c.reminders || []),
+                            newReminder,
+                        ],
+                    };
+                }
+                return c;
+            });
 
-        setContacts(updatedContacts);
+            setContacts(updatedContacts);
 
-        setReminderText("");
-        setReminderDate("");
+            setReminderText("");
+            setReminderDate("");
+        } catch (err) {
+            console.error("Add reminder failed", err);
+        }
     };
 
     return (
@@ -104,19 +104,13 @@ export default function Inbox() {
 
             {/* HEADER */}
             <div className="border-b pb-2 mb-2">
-                <h1 className="text-xl font-bold">
-                    {contact.name}
-                </h1>
-                <p className="text-sm text-gray-500">
-                    {contact.phone}
-                </p>
+                <h1 className="text-xl font-bold">{contact.name}</h1>
+                <p className="text-sm text-gray-500">{contact.phone}</p>
             </div>
 
-            {/* 🔔 REMINDER SECTION */}
+            {/* REMINDER */}
             <div className="border p-3 rounded mb-3 bg-yellow-50">
-                <h2 className="font-semibold mb-2">
-                    Add Reminder
-                </h2>
+                <h2 className="font-semibold mb-2">Add Reminder</h2>
 
                 <div className="flex gap-2">
                     <input
@@ -149,9 +143,7 @@ export default function Inbox() {
             {/* MESSAGES */}
             <div className="flex-1 overflow-y-auto space-y-2 bg-gray-50 p-3 rounded border">
                 {messages.length === 0 ? (
-                    <p className="text-gray-400">
-                        No messages yet
-                    </p>
+                    <p className="text-gray-400">No messages yet</p>
                 ) : (
                     messages.map((m) => (
                         <div
@@ -160,7 +152,7 @@ export default function Inbox() {
                         >
                             <div>{m.text}</div>
                             <div className="text-xs text-gray-400">
-                                {m.time}
+                                {m.created_at || ""}
                             </div>
                         </div>
                     ))

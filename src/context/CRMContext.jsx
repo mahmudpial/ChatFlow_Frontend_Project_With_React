@@ -1,20 +1,17 @@
-import { createContext, useContext, useEffect, useState } from "react";
-
-const CRMContext = createContext();
+import { useCallback, useState } from "react";
+import { contactService } from "../services/contactService";
+import { CRMContext } from "./CRMContextProvider";
 
 export function CRMProvider({ children }) {
     const [contacts, setContacts] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
 
-    // Load once (safe version)
-    useEffect(() => {
+    // 🚀 LOAD FROM API (NOT localStorage)
+    const loadContacts = useCallback(async () => {
         try {
-            const data = localStorage.getItem("contacts");
-
-            if (data) {
-                const parsed = JSON.parse(data);
-                setContacts(Array.isArray(parsed) ? parsed : []);
-            }
+            setLoading(true);
+            const data = await contactService.getAll();
+            setContacts(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error("Failed to load contacts:", error);
             setContacts([]);
@@ -23,22 +20,13 @@ export function CRMProvider({ children }) {
         }
     }, []);
 
-    // Save whenever contacts change
-    useEffect(() => {
-        if (!loading) {
-            localStorage.setItem(
-                "contacts",
-                JSON.stringify(contacts)
-            );
-        }
-    }, [contacts, loading]);
-
     return (
         <CRMContext.Provider
             value={{
                 contacts,
                 setContacts,
                 loading,
+                reloadContacts: loadContacts, // 🔥 explicit load on demand
             }}
         >
             {children}
@@ -46,6 +34,3 @@ export function CRMProvider({ children }) {
     );
 }
 
-export function useCRM() {
-    return useContext(CRMContext);
-}
